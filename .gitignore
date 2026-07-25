@@ -1,0 +1,30 @@
+# ---- Quartus build output ----
+db/
+incremental_db/
+output_files/
+simulation/
+greybox_tmp/
+hc_output/
+*.rpt
+*.summary
+*.smsg
+*.pin
+*.sof
+*.pof
+*.jdi
+*.qdf
+*.done
+*.sld
+*.qar
+PLLJ_PLLSPE_INFO.txt
+
+# ---- Simulation output ----
+SIM/*.vvp
+SIM/*.vcd
+SIM/.mut/
+
+# ---- Editor / OS ----
+*.bak
+*.orig
+*~
+.DS_Store

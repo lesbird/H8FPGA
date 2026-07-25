@@ -39,7 +39,7 @@
 
 set_global_assignment -name FAMILY "Cyclone IV E"
 set_global_assignment -name DEVICE EP4CE22F17C6
-set_global_assignment -name TOP_LEVEL_ENTITY H8FPGA
+set_global_assignment -name TOP_LEVEL_ENTITY h8fpga_top
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION 22.1STD.0
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "11:49:00  FEBRUARY 06, 2023"
 set_global_assignment -name LAST_QUARTUS_VERSION "22.1std.0 Lite Edition"
@@ -354,18 +354,61 @@ set_location_assignment PIN_J13 -to GPIO_1[32]
 set_location_assignment PIN_J14 -to GPIO_1[33]
 set_location_assignment PIN_T9 -to GPIO_1_IN[0]
 set_location_assignment PIN_R9 -to GPIO_1_IN[1]
+# ---------------------------------------------------------------------------
+# Stability rework -- Tier 0 (see STABILITY-REVIEW.md)
+#
+# 0.1  82 pins are assigned above but absent from the top-level design. The
+#      Quartus default for unused pins is "as output driving ground", which was
+#      pulling 23 GPIO low through the '245s onto the H8 backplane and driving
+#      the EPCS configuration flash pins as outputs.
+set_global_assignment -name RESERVE_ALL_UNUSED_PINS "AS INPUT TRI-STATED WITH WEAK PULL-UP"
+set_global_assignment -name RESERVE_ALL_UNUSED_PINS_NO_OUTPUT_GND "AS INPUT TRI-STATED WITH WEAK PULL-UP"
+#
+# 0.2  The project had no timing constraints at all, so TimeQuest analyzed
+#      nothing and the fitter optimized for nothing.
+set_global_assignment -name SDC_FILE H8FPGA.sdc
+# ---------------------------------------------------------------------------
+
 set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
 set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
 set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
-set_global_assignment -name VHDL_FILE COMPONENTS/T80/T80s.vhd
+# T80 core. T80s.vhd removed -- the only thing referencing it was the dead
+# T80s/inst76 instance in H8FPGA.bdf, which had every port dangling.
+# Z80pa.vhd is likewise gone: h8fpga_top instantiates T80pa directly and
+# supplies CEN_p/CEN_n, which the old wrapper never connected.
 set_global_assignment -name VHDL_FILE COMPONENTS/T80/T80pa.vhd
 set_global_assignment -name VHDL_FILE COMPONENTS/T80/T80_Reg.vhd
 set_global_assignment -name VHDL_FILE COMPONENTS/T80/T80_Pack.vhd
 set_global_assignment -name VHDL_FILE COMPONENTS/T80/T80_MCode.vhd
 set_global_assignment -name VHDL_FILE COMPONENTS/T80/T80_ALU.vhd
 set_global_assignment -name VHDL_FILE COMPONENTS/T80/T80.vhd
+
+# On-chip memories. H8FPGAPLL is retained but NO LONGER INSTANTIATED: the
+# design now runs directly off the 50 MHz oscillator with clock enables
+# (review 1.1). Keep it -- Tier 4 needs it for the phase-shifted DRAM clock.
 set_global_assignment -name QIP_FILE H8FPGAPLL.qip
-set_global_assignment -name BDF_FILE H8FPGA.bdf
 set_global_assignment -name QIP_FILE H8FPGAROM.qip
 set_global_assignment -name QIP_FILE H8FPGARAM.qip
+
+# ---------------------------------------------------------------------------
+# Verilog top level, replacing H8FPGA.bdf (which is retained on disk as a
+# reference for the original schematic but is no longer part of the build).
+#
+# WARNING: never add anything from SIM/ to this project. SIM/stubs.v
+# deliberately defines modules named T80pa, H8FPGAROM and H8FPGARAM, and would
+# shadow the real core and megafunctions.
+# ---------------------------------------------------------------------------
+set_global_assignment -name VERILOG_FILE RTL/h8fpga_top.v
+set_global_assignment -name VERILOG_FILE RTL/h8_clkgen.v
+set_global_assignment -name VERILOG_FILE RTL/h8_reset.v
+set_global_assignment -name VERILOG_FILE RTL/h8_sync.v
+set_global_assignment -name VERILOG_FILE RTL/h8_intctl.v
+set_global_assignment -name VERILOG_FILE RTL/h8_org0.v
+set_global_assignment -name VERILOG_FILE RTL/h8_busif.v
+set_global_assignment -name VERILOG_FILE RTL/h8_memmap.v
+set_global_assignment -name VERILOG_FILE RTL/h8_sdram.v
+
+# H8FPGARAM.qip is still listed: h8fpga_top's USE_SDRAM=0 fallback instantiates
+# it. With USE_SDRAM=1 the generate block leaves it out and the 32 M9K blocks it
+# used are freed.
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
