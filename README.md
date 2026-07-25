@@ -55,9 +55,10 @@ Interrupts from the H8 BUSS are handled properly<br>
 <br>
 This is the version that has actually run in an H8.
 
-**The Verilog rework** lives on the `stability-rework` branch. It is verified in
-simulation but **has not yet been compiled in Quartus or run on hardware.** If
-you want a known-working bitstream, use the original BDF design.
+**The Verilog rework** is what is on `main` now. It is verified in simulation but
+**has not yet been compiled in Quartus or run on hardware.** If you want a
+known-working bitstream, build from commit `4a71156` or earlier, which is the
+last state of the original BDF design.
 
 ## THE REWORK
 
